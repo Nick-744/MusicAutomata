@@ -5,6 +5,21 @@ from config import DEFAULT_DOWNLOAD_DIR
 
 
 
+def progress_hook(d):
+    ''' Intercepts the yt-dlp download progress and prints a clean, single-line update. '''
+
+    if d['status'] == 'downloading':
+        percent = d.get('_percent_str', '0%').strip()
+        speed   = d.get('_speed_str', 'N/A').strip()
+        eta     = d.get('_eta_str', 'N/A').strip()
+        
+        print(f'\r-> Downloading... {percent} at {speed}{25 * " "}', end = '', flush = True)
+        
+    elif d['status'] == 'finished':
+        print('\nProcessing download...')
+
+
+
 def download_song(url: str, output_dir: str = DEFAULT_DOWNLOAD_DIR) -> Optional[str]:
     '''
     Downloads audio from a given URL and converts it to MP3.
@@ -33,8 +48,12 @@ def download_song(url: str, output_dir: str = DEFAULT_DOWNLOAD_DIR) -> Optional[
             'preferredquality': '320',
         }],
         'outtmpl':    f'{output_dir}/%(title)s.%(ext)s',
-        'quiet':      False,
-        'noplaylist': True
+        'noplaylist': True,
+
+        # Clean progress output
+        'quiet':          True,
+        'no_warnings':    True,
+        'progress_hooks': [progress_hook]
     }
 
     try:
@@ -52,7 +71,7 @@ def download_song(url: str, output_dir: str = DEFAULT_DOWNLOAD_DIR) -> Optional[
             return downloaded_file;
 
     except Exception as e:
-        print(f'-> Error during download: {e}')
+        print(f'\n-> Error during download: {e}')
 
         return None;
 
@@ -64,6 +83,6 @@ if __name__ == '__main__':
     if target_url:
         result_path = download_song(target_url)
         if result_path:
-            print(f'-> Download complete: {result_path}')
+            print(f'\n-> Download complete: {result_path}')
     else:
-        print('-> No URL provided.')
+        print('\n-> No URL provided.')
