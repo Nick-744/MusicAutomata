@@ -1,7 +1,7 @@
 import os
 import yt_dlp
 from typing import Optional
-from config import DEFAULT_DOWNLOAD_DIR
+from .config import DEFAULT_DOWNLOAD_DIR
 
 
 
@@ -9,9 +9,8 @@ def progress_hook(d):
     ''' Intercepts the yt-dlp download progress and prints a clean, single-line update. '''
 
     if d['status'] == 'downloading':
-        percent = d.get('_percent_str', '0%').strip()
-        speed   = d.get('_speed_str', 'N/A').strip()
-        eta     = d.get('_eta_str', 'N/A').strip()
+        percent = d['_percent_str'].strip()
+        speed   = d['_speed_str'].strip()
         
         print(f'\r-> Downloading... {percent} at {speed}{25 * " "}', end = '', flush = True)
         

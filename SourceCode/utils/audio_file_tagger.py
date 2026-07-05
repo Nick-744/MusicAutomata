@@ -1,6 +1,6 @@
 import mutagen
 from pathlib import Path
-from song_recognizer import SongMetadata
+from .song_recognizer import SongMetadata
 
 
 
@@ -58,8 +58,9 @@ def apply_metadata_and_rename(filename: str, metadata: SongMetadata) -> str | No
         
         if new_filepath.exists() and new_filepath != file_path:
             print(f"-> A file named \'{new_filename}\' already exists.")
+            file_path.unlink() # Delete the original file to avoid duplicates!
 
-            return str(file_path);
+            return str(new_filepath);
 
         file_path.rename(new_filepath)
         print(f'-> File {new_filename} has been named successfully.')

@@ -2,7 +2,7 @@ import json
 import urllib.request
 
 import acoustid
-from config import API_KEY
+from .config import API_KEY
 from dataclasses import dataclass
 
 from tkinter import Tk
