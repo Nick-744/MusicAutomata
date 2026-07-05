@@ -134,17 +134,17 @@ def recognize_song(filename: str) -> SongMetadata | None:
         for (score, recording_id, title, artist) in results:
             deep_data = deep_search_musicbrainz(recording_id)
             
-            if deep_data:
-                recognition_result = SongMetadata(
-                    score        = score,
-                    recording_id = recording_id,
-                    title        = deep_data.get('title', title),
-                    artist       = deep_data.get('artist', artist),
-                    album        = deep_data.get('album'),
-                    album_artist = deep_data.get('album_artist'),
-                    year         = deep_data.get('year'),
-                    genres       = deep_data.get('genres')
-                )
+            recognition_result = SongMetadata(
+                score        = score,
+                recording_id = recording_id,
+                title        = deep_data.get('title', title),
+                artist       = deep_data.get('artist', artist),
+                album        = deep_data.get('album'),
+                album_artist = deep_data.get('album_artist'),
+                year         = deep_data.get('year'),
+                genres       = deep_data.get('genres')
+            )
+            
             break; # We only care about the first match!
             
     except Exception as e:
