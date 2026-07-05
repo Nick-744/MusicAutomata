@@ -16,17 +16,26 @@ class SongMetadata:
     recording_id: str
     title:        str
     artist:       str
+    album:        str | None = None
+    album_artist: str | None = None
+    year:         str | None = None
+    genres:       str | None = None
 
     def __str__(self):
         return f'''
-Score:        {self.score}
-Recording ID: {self.recording_id}
 Title:        {self.title}
-Artist:       {self.artist}''';
+Artist:       {self.artist}
+Album:        {self.album if self.album else 'N/A'}
+Album Artist: {self.album_artist if self.album_artist else 'N/A'}
+Year:         {self.year if self.year else 'N/A'}
+Genres:       {self.genres if self.genres else 'N/A'}
+-------------
+Score:        {self.score}
+Recording ID: {self.recording_id}''';
 
 
 
-def deep_search_musicbrainz(recording_id: str) -> tuple | None:
+def deep_search_musicbrainz(recording_id: str) -> dict:
     '''
     Queries the MusicBrainz directly using the recording ID to fetch missing metadata.
     
@@ -34,18 +43,17 @@ def deep_search_musicbrainz(recording_id: str) -> tuple | None:
     ----------
     recording_id : str
         The MusicBrainz recording ID for which to fetch metadata.
-    
+
     Returns
     -------
-    tuple | None
-        A tuple containing the title and artist(s) in the format (title, artist),
-        or None if the request fails or no data is found.
+    dict
+        A dictionary containing the fetched metadata if available,
+        or an empty dictionary if no metadata is found or an error occurs.
     '''
-
-    recognition_result = None
     
-    url     = f'https://musicbrainz.org/ws/2/recording/{recording_id}?inc=artists&fmt=json'
-    headers = { 'User-Agent': 'MusicAutomata/1.0' }
+    url      = f'https://musicbrainz.org/ws/2/recording/{recording_id}?inc=artists+releases+genres&fmt=json'
+    headers  = { 'User-Agent': 'MusicAutomata/1.0' }
+    metadata = {}
     
     try:
         req = urllib.request.Request(url, headers = headers)
@@ -53,19 +61,46 @@ def deep_search_musicbrainz(recording_id: str) -> tuple | None:
             data = json.loads(response.read().decode())
             
             # Extract title
-            title = data.get('title', None)
+            if data.get('title'):
+                metadata['title'] = data['title']
             
             # Extract artists
             artist_credits = data.get('artist-credit', [])
             artists        = [credit.get('name', '') for credit in artist_credits if 'name' in credit]
-            artist_str     = ', '.join(artists) if artists else None
+            if artists:
+                metadata['artist'] = ', '.join(artists)
             
-            recognition_result = (title, artist_str) if title and artist_str else None
+            # Extract genres
+            genre_list = [g.get('name', '').title() for g in data.get('genres', [])]
+            if genre_list:
+                metadata['genres'] = ', '.join(genre_list)
+            
+            # Extract album and year from releases
+            releases = data.get('releases', [])
+            if releases:
+                # Grab the 1st available release
+                first_release = releases[0]
+                
+                if first_release.get('title'):
+                    metadata['album'] = first_release['title']
+                
+                # Extract the Year from the Date string
+                date_str = first_release.get('date', '')
+                if date_str:
+                    metadata['year'] = date_str[:4]
+                
+                # Extract Album Artist if it differs from the Track Artist
+                album_artist_credits = first_release.get('artist-credit', [])
+                album_artists        = [credit.get('name', '') for credit in album_artist_credits if 'name' in credit]
+                if album_artists:
+                    metadata['album_artist'] = ', '.join(album_artists) if album_artists else metadata['artist']
             
     except Exception as e:
-        raise RuntimeError('Error fetching metadata from MusicBrainz') from e;
+        print(f'Fetching metadata from MusicBrainz failed: {e}')
+
+        return {}; # If any error occurs, return an empty dictionary!
     
-    return recognition_result;
+    return metadata;
 
 
 
@@ -97,13 +132,20 @@ def recognize_song(filename: str) -> SongMetadata | None:
         )
         
         for (score, recording_id, title, artist) in results:
-
-            if (title is None) or (artist is None):
-                metadata        = deep_search_musicbrainz(recording_id)
-                (title, artist) = metadata if metadata is not None else ('Unknown Title', 'Unknown Artist')
-
-            recognition_result = SongMetadata(score, recording_id, title, artist)
-            break;
+            deep_data = deep_search_musicbrainz(recording_id)
+            
+            if deep_data:
+                recognition_result = SongMetadata(
+                    score        = score,
+                    recording_id = recording_id,
+                    title        = deep_data.get('title', title),
+                    artist       = deep_data.get('artist', artist),
+                    album        = deep_data.get('album'),
+                    album_artist = deep_data.get('album_artist'),
+                    year         = deep_data.get('year'),
+                    genres       = deep_data.get('genres')
+                )
+            break; # We only care about the first match!
             
     except Exception as e:
         raise RuntimeError('Error recognizing song') from e;
@@ -114,8 +156,10 @@ def recognize_song(filename: str) -> SongMetadata | None:
 
 if __name__ == '__main__':
     # Pick the audio file with GUI
-    Tk().withdraw()
+    root = Tk()
+    root.withdraw()
     filename = askopenfilename()
+    root.destroy()
 
     if filename:
         result = recognize_song(filename)
