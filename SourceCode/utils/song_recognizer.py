@@ -194,7 +194,7 @@ def deep_search_musicbrainz(recording_id: str) -> dict:
 
 
 
-def recognize_song(filename: str) -> SongMetadata | None:
+def recognize_song(filename: str) -> list[SongMetadata]:
     '''
     Recognizes a song from a given audio file using the AcoustID API.
 
@@ -205,12 +205,12 @@ def recognize_song(filename: str) -> SongMetadata | None:
 
     Returns
     -------
-    SongMetadata | None
-        A SongMetadata object containing the recognition result if a match is found,
-        or None if no match is found or an error occurs during recognition.
+    list[SongMetadata]
+        A list of SongMetadata objects containing the recognition results.
+        If no matches are found or an error occurs, an empty list is returned.
     '''
 
-    recognition_result = None
+    recognition_results = []
 
     try:
         results = acoustid.match(
@@ -228,7 +228,7 @@ def recognize_song(filename: str) -> SongMetadata | None:
             final_artist = deep_data.get('artist', artist)
             lyrics       = fetch_lyrics(final_artist, final_title)
 
-            recognition_result = SongMetadata(
+            recognition_results.append(SongMetadata(
                 score        = score,
                 recording_id = recording_id,
                 title        = final_title,
@@ -240,14 +240,12 @@ def recognize_song(filename: str) -> SongMetadata | None:
                 cover_art    = deep_data.get('cover_art'),
                 cover_mime   = deep_data.get('cover_mime'),
                 lyrics       = lyrics
-            )
-            
-            break; # We only care about the first match!
+            ))
             
     except Exception as e:
         raise RuntimeError('Error recognizing song') from e;
 
-    return recognition_result;
+    return recognition_results;
 
 
 
