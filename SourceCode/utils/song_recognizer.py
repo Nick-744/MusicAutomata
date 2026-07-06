@@ -16,10 +16,14 @@ class SongMetadata:
     recording_id: str
     title:        str
     artist:       str
+
     album:        str | None = None
     album_artist: str | None = None
     year:         str | None = None
     genres:       str | None = None
+
+    cover_art:  bytes | None = None
+    cover_mime: str   | None = None
 
     def __str__(self):
         return f'''
@@ -29,9 +33,44 @@ Album:        {self.album if self.album else 'N/A'}
 Album Artist: {self.album_artist if self.album_artist else 'N/A'}
 Year:         {self.year if self.year else 'N/A'}
 Genres:       {self.genres if self.genres else 'N/A'}
+Cover Art:    {'Yes' if self.cover_art else 'N/A'}
 -------------
 Score:        {self.score}
 Recording ID: {self.recording_id}''';
+
+
+
+def fetch_cover_art(release_id: str) -> tuple[bytes, str] | None:
+    '''
+    Fetches the front cover art image for a given MusicBrainz release from the Cover Art Archive.
+
+    Parameters
+    ----------
+    release_id : str
+        The MusicBrainz release ID for which to fetch cover art.
+
+    Returns
+    -------
+    tuple[bytes, str] | None
+        A tuple of (image_bytes, mime_type) if cover art was found,
+        or None if no cover art is available or an error occurs.
+    '''
+
+    url     = f'https://coverartarchive.org/release/{release_id}/front'
+    headers = { 'User-Agent': 'MusicAutomata/1.0' }
+
+    try:
+        req = urllib.request.Request(url, headers = headers)
+        with urllib.request.urlopen(req) as response:
+            image_data = response.read()
+            mime_type  = response.headers.get('Content-Type', 'image/jpeg')
+
+            return (image_data, mime_type);
+
+    except Exception as e:
+        print(f'-> Fetching cover art failed: {e}')
+
+        return None;
 
 
 
@@ -94,9 +133,18 @@ def deep_search_musicbrainz(recording_id: str) -> dict:
                 album_artists        = [credit.get('name', '') for credit in album_artist_credits if 'name' in credit]
                 if album_artists:
                     metadata['album_artist'] = ', '.join(album_artists) if album_artists else metadata['artist']
+
+                # Fetch the cover art (thumbnail) using the release ID
+                release_id = first_release.get('id')
+                if release_id:
+                    cover_result = fetch_cover_art(release_id)
+                    if cover_result:
+                        (cover_data, cover_mime) = cover_result
+                        metadata['cover_art']    = cover_data
+                        metadata['cover_mime']   = cover_mime
             
     except Exception as e:
-        print(f'Fetching metadata from MusicBrainz failed: {e}')
+        print(f'-> Fetching metadata from MusicBrainz failed: {e}')
 
         return {}; # If any error occurs, return an empty dictionary!
     
@@ -142,7 +190,9 @@ def recognize_song(filename: str) -> SongMetadata | None:
                 album        = deep_data.get('album'),
                 album_artist = deep_data.get('album_artist'),
                 year         = deep_data.get('year'),
-                genres       = deep_data.get('genres')
+                genres       = deep_data.get('genres'),
+                cover_art    = deep_data.get('cover_art'),
+                cover_mime   = deep_data.get('cover_mime')
             )
             
             break; # We only care about the first match!

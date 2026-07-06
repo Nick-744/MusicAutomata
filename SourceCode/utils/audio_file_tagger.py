@@ -1,6 +1,55 @@
 import mutagen
 from pathlib import Path
 from .song_recognizer import SongMetadata
+from mutagen.id3 import ID3, APIC, ID3NoHeaderError
+
+
+
+def embed_cover_art(filename: str, cover_art: bytes, cover_mime: str | None = None) -> bool:
+    '''
+    Embeds cover art (the thumbnail) into an audio file's tags.
+
+    Parameters
+    ----------
+    filename   : str
+        The path to the audio file to embed the cover art into.
+    cover_art  : bytes
+        The raw image bytes to embed.
+    cover_mime : str | None
+        The MIME type of the image (defaults to 'image/jpeg').
+
+    Returns
+    -------
+    bool
+        True if the cover art was embedded successfully, False otherwise.
+    '''
+
+    mime_type = cover_mime or 'image/jpeg'
+
+    try:
+        try:
+            tags = ID3(filename)
+        except ID3NoHeaderError:
+            tags = ID3()
+
+        tags.delall('APIC')
+        tags.add(APIC(
+            encoding = 3, # UTF-8
+            mime     = mime_type,
+            type     = 3, # Front cover
+            desc     = 'Cover',
+            data     = cover_art
+        ))
+        tags.save(filename)
+
+        print('-> Cover art embedded successfully.')
+
+        return True;
+
+    except Exception as e:
+        print(f'-> Error embedding cover art: {e}')
+
+        return False;
 
 
 
@@ -42,6 +91,10 @@ def apply_metadata_and_rename(filename: str, metadata: SongMetadata) -> str | No
         
         audio.save()
         print('-> Metadata written successfully.')
+
+        # Embed the cover art (thumbnail), if one was found...
+        if metadata.cover_art:
+            embed_cover_art(filename, metadata.cover_art, metadata.cover_mime)
         
     except Exception as e:
         print(f'-> Error writing metadata: {e}')
