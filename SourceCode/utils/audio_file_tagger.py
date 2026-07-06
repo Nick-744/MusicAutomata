@@ -1,7 +1,7 @@
 import mutagen
 from pathlib import Path
 from .song_recognizer import SongMetadata
-from mutagen.id3 import ID3, APIC, ID3NoHeaderError
+from mutagen.id3 import ID3, APIC, USLT, ID3NoHeaderError
 
 
 
@@ -53,6 +53,49 @@ def embed_cover_art(filename: str, cover_art: bytes, cover_mime: str | None = No
 
 
 
+def embed_lyrics(filename: str, lyrics: str) -> bool:
+    '''
+    Embeds plain-text (unsynced) lyrics into an audio file's tags.
+
+    Parameters
+    ----------
+    filename : str
+        The path to the audio file to embed the lyrics into.
+    lyrics   : str
+        The lyrics text to embed.
+
+    Returns
+    -------
+    bool
+        True if the lyrics were embedded successfully, False otherwise.
+    '''
+
+    try:
+        try:
+            tags = ID3(filename)
+        except ID3NoHeaderError:
+            tags = ID3()
+
+        tags.delall('USLT')
+        tags.add(USLT(
+            encoding = 3, # UTF-8
+            lang     = None,
+            desc     = '',
+            text     = lyrics
+        ))
+        tags.save(filename)
+
+        print('-> Lyrics embedded successfully.')
+
+        return True;
+
+    except Exception as e:
+        print(f'-> Error embedding lyrics: {e}')
+
+        return False;
+
+
+
 def apply_metadata_and_rename(filename: str, metadata: SongMetadata) -> str | None:
     '''
     Apply metadata to an audio file and rename it based on the metadata.
@@ -95,6 +138,10 @@ def apply_metadata_and_rename(filename: str, metadata: SongMetadata) -> str | No
         # Embed the cover art (thumbnail), if one was found...
         if metadata.cover_art:
             embed_cover_art(filename, metadata.cover_art, metadata.cover_mime)
+
+        # Embed the lyrics, if they were found...
+        if metadata.lyrics:
+            embed_lyrics(filename, metadata.lyrics)
         
     except Exception as e:
         print(f'-> Error writing metadata: {e}')
