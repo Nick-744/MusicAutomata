@@ -80,7 +80,7 @@ def fetch_cover_art(release_id: str) -> tuple[bytes, str] | None:
 
 def fetch_lyrics(artist: str, title: str) -> str | None:
     '''
-    Fetches plain-text lyrics for a given artist/title from the lyrics.ovh API.
+    Fetches plain-text lyrics for a given artist/title from the LRCLIB API.
 
     Parameters
     ----------
@@ -98,21 +98,30 @@ def fetch_lyrics(artist: str, title: str) -> str | None:
     if not artist or not title:
         return None;
 
-    url     = f'https://api.lyrics.ovh/v1/{urllib.parse.quote(artist)}/{urllib.parse.quote(title)}'
+    query   = urllib.parse.urlencode({
+        'artist_name': artist,
+        'track_name':  title
+    })
+    url     = f'https://lrclib.net/api/search?{query}'
     headers = { 'User-Agent': 'MusicAutomata/1.0' }
 
     try:
         req = urllib.request.Request(url, headers = headers)
         with urllib.request.urlopen(req, timeout = 20) as response:
-            data   = json.loads(response.read().decode())
-            lyrics = data.get('lyrics')
-
-            return lyrics.strip() if lyrics else None;
+            data = json.loads(response.read().decode())
+            
+            # Iterate through the results to find the plain-text lyrics...
+            for match in data:
+                lyrics = match.get('plainLyrics')
+                if lyrics:
+                    return lyrics.strip();
 
     except Exception as e:
         print(f'-> Fetching lyrics failed: {e}')
 
         return None;
+
+    return None; # No lyrics found...
 
 
 

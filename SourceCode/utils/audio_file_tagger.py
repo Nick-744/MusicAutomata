@@ -79,7 +79,7 @@ def embed_lyrics(filename: str, lyrics: str) -> bool:
         tags.delall('USLT')
         tags.add(USLT(
             encoding = 3, # UTF-8
-            lang     = None,
+            lang     = 'und',
             desc     = '',
             text     = lyrics
         ))
