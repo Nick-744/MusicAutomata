@@ -132,7 +132,7 @@ def deep_search_musicbrainz(recording_id: str) -> dict:
         or an empty dictionary if no metadata is found or an error occurs.
     '''
     
-    url      = f'https://musicbrainz.org/ws/2/recording/{recording_id}?inc=artists+releases+genres&fmt=json'
+    url      = f'https://musicbrainz.org/ws/2/recording/{recording_id}?inc=artists+releases+release-groups+genres&fmt=json'
     headers  = { 'User-Agent': 'MusicAutomata/1.0' }
     metadata = {}
     
@@ -159,25 +159,71 @@ def deep_search_musicbrainz(recording_id: str) -> dict:
             # Extract album and year from releases
             releases = data.get('releases', [])
             if releases:
-                # Grab the 1st available release
-                first_release = releases[0]
+                def score_release(r: dict) -> tuple[int, int]:
+                    ''' Scores a release based on its attributes to prioritize the best match.
+                    Returns a tuple of (score, -year) for sorting purposes.
+                    
+                    Not the best solution, but it works for now... '''
+
+                    score = 0
+
+                    # Prioritize official releases
+                    if r.get('status') == 'Official':
+                        score += 10
+                    
+                    # Check release group types
+                    rg      = r.get('release-group', {})
+                    p_type  = rg.get('primary-type')
+                    s_types = rg.get('secondary-types', [])
+                    
+                    # Apply bonuses for certain primary types
+                    if p_type == 'Album':
+                        score += 10
+                    elif p_type in ['EP', 'Single']:
+                        score += 5
+                    
+                    # Apply penalties for certain secondary types
+                    if 'Compilation' in s_types:
+                        score -= 15
+                    if 'Live' in s_types:
+                        score -= 10
+
+                    # Apply bonuses for certain countries
+                    country = r.get('country', '')
+                    if country in ['JP', 'US', 'XW']:
+                        score += 2
+                    
+                    # Extract the year from the date string for sorting
+                    date_str = r.get('date', '9999')
+                    if len(date_str) >= 4 and date_str[:4].isdigit():
+                        year = int(date_str[:4])
+                    else:
+                        year = 9999
+                    
+                    # -year -> Hack for sorting in reverse order (older releases first)
+                    return (score, -year);
+
+                # Sort releases based on the scoring function!
+                releases.sort(key = score_release, reverse = True)
+                # Grab the best available release
+                best_release = releases[0]
                 
-                if first_release.get('title'):
-                    metadata['album'] = first_release['title']
+                if best_release.get('title'):
+                    metadata['album'] = best_release['title']
                 
                 # Extract the Year from the Date string
-                date_str = first_release.get('date', '')
+                date_str = best_release.get('date', '')
                 if date_str:
                     metadata['year'] = date_str[:4]
                 
                 # Extract Album Artist if it differs from the Track Artist
-                album_artist_credits = first_release.get('artist-credit', [])
+                album_artist_credits = best_release.get('artist-credit', [])
                 album_artists        = [credit.get('name', '') for credit in album_artist_credits if 'name' in credit]
                 if album_artists:
                     metadata['album_artist'] = ', '.join(album_artists) if album_artists else metadata['artist']
 
                 # Fetch the cover art (thumbnail) using the release ID
-                release_id = first_release.get('id')
+                release_id = best_release.get('id')
                 if release_id:
                     cover_result = fetch_cover_art(release_id)
                     if cover_result:
@@ -222,6 +268,9 @@ def recognize_song(filename: str) -> list[SongMetadata]:
         )
         
         for (score, recording_id, title, artist) in results:
+            if score < 0.9:
+                continue; # Skip low-confidence matches!
+            
             deep_data = deep_search_musicbrainz(recording_id)
 
             final_title  = deep_data.get('title', title)
