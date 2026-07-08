@@ -24,7 +24,7 @@ Before running the application, make sure you have Python installed along with *
 Install the required Python libraries using pip:
 
 ```bash
-pip install mutagen yt-dlp acoustid Pillow
+pip install mutagen yt-dlp pyacoustid Pillow
 
 ```
 
