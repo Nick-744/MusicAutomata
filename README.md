@@ -10,14 +10,17 @@ MusicAutomata is an automated music downloader and tagger. It downloads audio fr
 * **Acoustic Fingerprinting**: Leverages the AcoustID API to accurately identify songs regardless of the source file name.
 * **Deep Metadata Enrichment**: Automatically queries MusicBrainz for release information, release years, and genres.
 * **Artwork & Lyrics Fetching**: Pulls front covers from the Cover Art Archive and plain-text lyrics from LRCLIB.
-* **Interactive Metadata Selector**: A clean Tkinter GUI allows you to preview matches, inspect cover art, edit/paste lyrics, and select the best metadata candidate.
+* **Interactive Metadata Selector**: A Tkinter GUI allows you to preview matches, inspect cover art, edit/paste lyrics, and select the best metadata candidate.
 * **Automated Organization**: Automatically embeds ID3 tags (including APIC for covers and USLT for lyrics) and renames files cleanly to `Title - Artist.mp3`.
 
 ---
 
 ## Prerequisites
 
-Before running the application, make sure you have Python installed along with **FFmpeg** (required by `yt-dlp` for audio conversion) configured in your system's PATH.
+Before running the application, make sure you have Python installed along with the following tools configured in your system's PATH:
+
+* **FFmpeg** — required by `yt-dlp` for audio conversion.
+* **fpcalc** (Chromaprint) — required by `acoustid` to generate acoustic fingerprints. Download it from [acoustid.org/chromaprint](https://acoustid.org/chromaprint).
 
 ### Install Dependencies
 
