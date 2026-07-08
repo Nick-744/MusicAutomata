@@ -229,7 +229,9 @@ def deep_search_musicbrainz(recording_id: str) -> dict:
                 album_artist_credits = best_release.get('artist-credit', [])
                 album_artists        = [credit.get('name', '') for credit in album_artist_credits if 'name' in credit]
                 if album_artists:
-                    metadata['album_artist'] = ', '.join(album_artists) if album_artists else metadata['artist']
+                    metadata['album_artist'] = ', '.join(album_artists)
+                else:
+                    metadata['album_artist'] = metadata.get('artist')
 
                 # Fetch the cover art (thumbnail) using the release ID
                 release_id = best_release.get('id')
