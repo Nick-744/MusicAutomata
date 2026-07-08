@@ -1,6 +1,6 @@
 # MusicAutomata
 
-MusicAutomata is an automated music downloader and tagger. It downloads audio from a URL, generates an acoustic fingerprint to identify the track, pulls metadata, album art, and lyrics from online databases, and gives you an interactive GUI to verify and save the perfectly tagged file.
+MusicAutomata is an automated music downloader and tagger. It downloads audio from a URL, generates an acoustic fingerprint to identify the track, pulls metadata, album art, and lyrics from online databases, and gives you an interactive GUI to verify and save the tagged file.
 
 ---
 
