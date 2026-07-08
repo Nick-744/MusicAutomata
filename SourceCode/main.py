@@ -219,30 +219,30 @@ def main():
     # Get the URL
     target_url = input('Enter the URL: ').strip()
     if not target_url:
-        print('\n-> No URL provided. Exiting...')
+        print('\n-> No URL provided.')
 
-        sys.exit(1);
+        return;
 
     # Download the audio
     downloaded_file = download_song(target_url)
     if not downloaded_file:
-        print('\n-> Process aborted due to download failure. Exiting...')
+        print('\n-> Process aborted due to download failure.')
 
-        sys.exit(1);
+        return;
 
     # Recognize the audio
     metadata_results = recognize_song(downloaded_file)
     if not metadata_results:
-        print('\n-> Could not recognize the song. The file was saved without tags. Exiting...')
+        print('\n-> Could not recognize the song. The file was saved without tags.')
 
-        sys.exit(1);
+        return;
     
     # Launch GUI for user to choose the correct metadata
     selected_metadata = choose_metadata(metadata_results)
     if not selected_metadata:
-        print('\n-> No metadata selected (Action cancelled). Exiting...')
+        print('\n-> No metadata selected (Action cancelled).')
 
-        sys.exit(1);
+        return;
     
     print(f'{selected_metadata}\n')
 
@@ -251,9 +251,9 @@ def main():
     if final_filepath:
         print(f'\n-> Process complete! Final file: {final_filepath}')
     else:
-        print('\n-> Process failed during tagging/renaming. Exiting...')
+        print('\n-> Process failed during tagging/renaming.')
 
-        sys.exit(1);
+        return;
 
     return;
 
