@@ -16,6 +16,7 @@ def choose_metadata(metadata_results: list[SongMetadata]) -> SongMetadata | None
 
     selected_meta   = None
     cover_photo_ref = None
+    current_index   = None
 
     root = tk.Tk()
     root.title('MusicAutomata - Select Metadata')
@@ -82,7 +83,13 @@ def choose_metadata(metadata_results: list[SongMetadata]) -> SongMetadata | None
 
         field_labels[field] = value_lbl
 
-    tk.Label(preview_frame, text = 'Lyrics:', font = ('Segoe UI', 9, 'bold'), anchor = 'w').pack(fill = tk.X)
+    lyrics_header = tk.Frame(preview_frame)
+    lyrics_header.pack(fill = tk.X)
+
+    tk.Label(lyrics_header, text = 'Lyrics:', font = ('Segoe UI', 9, 'bold'), anchor = 'w').pack(side = tk.LEFT)
+
+    tk.Button(lyrics_header, text = 'Paste', width = 8, command = lambda: on_paste_lyrics()).pack(side = tk.RIGHT, padx = (5, 0))
+    tk.Button(lyrics_header, text = 'Clear', width = 8, command = lambda: on_clear_lyrics()).pack(side = tk.RIGHT)
 
     lyrics_frame = tk.Frame(preview_frame)
     lyrics_frame.pack(fill = tk.BOTH, expand = True)
@@ -99,9 +106,10 @@ def choose_metadata(metadata_results: list[SongMetadata]) -> SongMetadata | None
     def update_preview(index: int):
         ''' Refreshes the preview panel for the given candidate index. '''
 
-        nonlocal cover_photo_ref
+        nonlocal cover_photo_ref, current_index
 
-        meta = metadata_results[index]
+        current_index = index
+        meta          = metadata_results[index]
 
         field_labels['Title'].config(       text = meta.title        or 'N/A')
         field_labels['Artist'].config(      text = meta.artist       or 'N/A')
@@ -132,13 +140,47 @@ def choose_metadata(metadata_results: list[SongMetadata]) -> SongMetadata | None
 
         return;
 
-    def on_tree_select():
+    def on_tree_select(event = None):
         if selected := tree.selection():
             update_preview(tree.index(selected[0]))
 
         return;
 
-    def on_select():
+    def on_clear_lyrics():
+        ''' Clears the lyrics text box and the underlying metadata for the current candidate. '''
+
+        if current_index is None:
+            return;
+
+        lyrics_text.config(state = tk.NORMAL)
+        lyrics_text.delete('1.0', tk.END)
+        lyrics_text.config(state = tk.DISABLED)
+
+        metadata_results[current_index].lyrics = ''
+
+        return;
+
+    def on_paste_lyrics():
+        ''' Pastes clipboard text into the lyrics box, replacing its current content. '''
+
+        if current_index is None:
+            return;
+
+        try:
+            clipboard_content = root.clipboard_get()
+        except tk.TclError:
+            return;
+
+        lyrics_text.config(state = tk.NORMAL)
+        lyrics_text.delete('1.0', tk.END)
+        lyrics_text.insert('1.0', clipboard_content)
+        lyrics_text.config(state = tk.DISABLED)
+
+        metadata_results[current_index].lyrics = clipboard_content
+
+        return;
+
+    def on_select(event = None):
         nonlocal selected_meta
 
         if selected := tree.selection():
